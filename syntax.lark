@@ -1,0 +1,532 @@
+%import common.WS
+%ignore WS
+%ignore /#[^\n]*\n/
+%ignore /\/\/[^\n]*\n/
+
+token: keyword
+     | identifier
+     | constant
+     | string_literal
+     | punctuator
+
+?preprocessing_token: header_name
+                   | identifier
+                   | pp_number
+                   | character_constant
+                   | string_literal
+                   | punctuator
+
+
+KEYWORD: "auto" | "if" | "unsigned"
+       | "break" | "inline" | "void"
+       | "case" | "int" | "volatile"
+       | "char" | "long" | "while"
+       | "const" | "register" | "_Alignas"
+       | "continue" | "restrict" | "_Alignof"
+       | "default" | "return" | "_Atomic"
+       | "do" | "short" | "_Bool"
+       | "double" | "signed" | "_Complex"
+       | "else" | "sizeof" | "_Generic"
+       | "enum" | "static" | "_Imaginary"
+       | "extern" | "struct" | "_Noreturn"
+       | "float" | "switch" | "_Static_assert"
+       | "for" | "typedef" | "_Thread_local"
+       | "goto" | "union" | "__restrict" | "__restrict__"
+keyword: KEYWORD
+
+IDENTIFIER: IDENTIFIER_NONDIGIT ( IDENTIFIER_NONDIGIT | DIGIT )*
+identifier: IDENTIFIER
+
+IDENTIFIER_NONDIGIT: NONDIGIT
+                   | UNIVERSAL_CHARACTER_NAME
+
+UNIVERSAL_CHARACTER_NAME: "\\u" HEX_QUAD
+                        | "\\U" HEX_QUAD HEX_QUAD
+
+HEX_QUAD: HEXADECIMAL_DIGIT HEXADECIMAL_DIGIT
+
+NONDIGIT: "_"
+        | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m"
+        | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+        | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M"
+        | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+
+DIGIT: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+
+constant: integer_constant
+        | floating_constant
+        | enumeration_constant
+        | character_constant
+
+
+integer_constant: DECIMAL_CONSTANT INTEGER_SUFFIX?
+                | OCTAL_CONSTANT INTEGER_SUFFIX?
+                | HEXADECIMAL_CONSTANT INTEGER_SUFFIX?
+
+DECIMAL_CONSTANT: NONZERO_DIGIT DIGIT*
+
+OCTAL_CONSTANT: "0" OCTAL_DIGIT*
+
+HEXADECIMAL_CONSTANT: HEXADECIMAL_PREFIX HEXADECIMAL_DIGIT+
+
+HEXADECIMAL_PREFIX: "0x" | "0X"
+
+NONZERO_DIGIT: "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+OCTAL_DIGIT: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7"
+
+HEXADECIMAL_DIGIT: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+                 | "a" | "b" | "c" | "d" | "e" | "f"
+                 | "A" | "B" | "C" | "D" | "E" | "F"
+
+INTEGER_SUFFIX: UNSIGNED_SUFFIX LONG_SUFFIX?
+              | UNSIGNED_SUFFIX LONG_LONG_SUFFIX
+              | LONG_SUFFIX UNSIGNED_SUFFIX?
+              | LONG_LONG_SUFFIX UNSIGNED_SUFFIX?
+
+UNSIGNED_SUFFIX: "u" | "U"
+
+LONG_SUFFIX: "l" | "L"
+
+LONG_LONG_SUFFIX: "ll" | "LL"
+
+
+floating_constant: DECIMAL_FLOATING_CONSTANT
+                 | HEXADECIMAL_FLOATING_CONSTANT
+
+DECIMAL_FLOATING_CONSTANT: FRACTIONAL_CONSTANT EXPONENT_PART? FLOATING_SUFFIX?
+                         | DIGIT_SEQUENCE EXPONENT_PART FLOATING_SUFFIX?
+
+HEXADECIMAL_FLOATING_CONSTANT: HEXADECIMAL_PREFIX HEXADECIMAL_FRACTIONAL_CONSTANT BINARY_EXPONENT_PART FLOATING_SUFFIX?
+                             | HEXADECIMAL_PREFIX HEXADECIMAL_DIGIT_SEQUENCE BINARY_EXPONENT_PART FLOATING_SUFFIX?
+
+FRACTIONAL_CONSTANT: DIGIT_SEQUENCE? "." DIGIT_SEQUENCE
+                   | DIGIT_SEQUENCE "."
+
+EXPONENT_PART: "e" SIGN? DIGIT_SEQUENCE
+             | "E" SIGN? DIGIT_SEQUENCE
+
+SIGN: "+" | "-"
+
+DIGIT_SEQUENCE: DIGIT+
+
+HEXADECIMAL_FRACTIONAL_CONSTANT: HEXADECIMAL_DIGIT_SEQUENCE? "." HEXADECIMAL_DIGIT_SEQUENCE
+                               | HEXADECIMAL_DIGIT_SEQUENCE "."
+
+BINARY_EXPONENT_PART: "p" SIGN? DIGIT_SEQUENCE
+                    | "P" SIGN? DIGIT_SEQUENCE
+
+HEXADECIMAL_DIGIT_SEQUENCE: HEXADECIMAL_DIGIT+
+
+FLOATING_SUFFIX: "f" | "l" | "F" | "L"
+
+
+enumeration_constant: identifier
+
+
+character_constant: "'" C_CHAR_SEQUENCE "'"
+                  | "L'" C_CHAR_SEQUENCE "'"
+                  | "u'" C_CHAR_SEQUENCE "'"
+                  | "U'" C_CHAR_SEQUENCE "'"
+
+C_CHAR_SEQUENCE: C_CHAR+
+
+C_CHAR: /[^'\\\n]/
+      | ESCAPE_SEQUENCE
+
+ESCAPE_SEQUENCE: SIMPLE_ESCAPE_SEQUENCE
+               | OCTAL_ESCAPE_SEQUENCE
+               | HEXADECIMAL_ESCAPE_SEQUENCE
+               | UNIVERSAL_CHARACTER_NAME
+
+SIMPLE_ESCAPE_SEQUENCE: "\\'" | "\\\"" | "\\?" | "\\\\"
+                      | "\\a" | "\\b" | "\\f" | "\\n" | "\\r" | "\\t" | "\\v"
+
+OCTAL_ESCAPE_SEQUENCE: "\\" OCTAL_DIGIT
+                     | "\\" OCTAL_DIGIT OCTAL_DIGIT
+                     | "\\" OCTAL_DIGIT OCTAL_DIGIT OCTAL_DIGIT
+
+HEXADECIMAL_ESCAPE_SEQUENCE: "\\x" HEXADECIMAL_DIGIT+
+
+string_literal: (ENCODING_PREFIX? "\"" S_CHAR_SEQUENCE? "\"")+
+
+ENCODING_PREFIX: "u8" | "u" | "U" | "L"
+
+S_CHAR_SEQUENCE: S_CHAR+
+
+S_CHAR: /[^"\\\n]/
+      | ESCAPE_SEQUENCE
+
+
+PUNCTUATOR: "[" | "]" | "(" | ")" | "{" | "}" | "." | "->"
+          | "++" | "--" | "&" | "*" | "+" | "-" | "~" | "!"
+          | "/" | "%" | "<<" | ">>" | "<" | ">" | "<=" | ">=" | "==" | "!=" | "^" | "|" | "&&" | "||"
+          | "?" | ":" | ";" | "..."
+          | "=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | "&=" | "^=" | "|="
+          | "," | "#" | "##"
+punctuator: PUNCTUATOR
+
+header_name: "<" H_CHAR_SEQUENCE ">" -> system_include
+           | "\"" Q_CHAR_SEQUENCE "\"" -> local_include
+
+H_CHAR_SEQUENCE: H_CHAR+
+
+H_CHAR: /[^>\n]/
+
+Q_CHAR_SEQUENCE: Q_CHAR+
+
+Q_CHAR: /[^"\n]/
+
+
+PP_NUMBER: "."? DIGIT | ( "."? DIGIT ( DIGIT | IDENTIFIER_NONDIGIT | "e" SIGN | "E" SIGN | "p" SIGN | "P" SIGN | "." ))+
+pp_number: PP_NUMBER
+
+primary_expression: identifier
+                  | constant
+                  | string_literal
+                  | "(" expression ")"
+                  | generic_selection
+
+
+generic_selection: "_Generic" "(" assignment_expression "," generic_assoc_list ")"
+
+generic_assoc_list: generic_association ("," generic_association)*
+
+generic_association: type_name ":" assignment_expression
+                   | "default" ":" assignment_expression
+
+
+?postfix_expression: primary_expression
+                  | postfix_expression "[" expression "]" -> array_subscript
+                  | postfix_expression "(" argument_expression_list? ")" -> function_call
+                  | postfix_expression "." identifier -> member_access
+                  | postfix_expression "->" identifier -> pointer_member_access
+                  | postfix_expression "++" -> postfix_increment
+                  | postfix_expression "--" -> postfix_decrement
+                  | "(" type_name ")" "{" initializer_list "}" -> compound_literal
+                  | "(" type_name ")" "{" initializer_list "," "}" -> compound_literal
+
+argument_expression_list: assignment_expression ("," assignment_expression)*
+
+?unary_expression: postfix_expression
+                 | "++" unary_expression -> prefix_increment
+                 | "--" unary_expression -> prefix_decrement
+                 | unary_operator cast_expression
+                 | "sizeof" unary_expression -> sizeof
+                 | "sizeof" "(" type_name ")" -> sizeof
+                 | "_Alignof" "(" type_name ")" -> alignof
+
+unary_operator: "&" | "*" | "+" | "-" | "~" | "!"
+
+
+?cast_expression: unary_expression
+                | ("(" type_name ")")* cast_expression
+
+
+?multiplicative_expression: cast_expression
+                          | multiplicative_expression "*" cast_expression
+                          | multiplicative_expression "/" cast_expression
+                          | multiplicative_expression "%" cast_expression
+
+
+?additive_expression: multiplicative_expression
+                    | additive_expression "+" multiplicative_expression
+                    | additive_expression "-" multiplicative_expression
+
+
+?shift_expression: additive_expression
+                 | shift_expression "<<" additive_expression
+                 | shift_expression ">>" additive_expression
+
+
+?relational_expression: shift_expression
+                      | relational_expression "<" shift_expression
+                      | relational_expression ">" shift_expression
+                      | relational_expression "<=" shift_expression
+                      | relational_expression ">=" shift_expression
+
+
+?equality_expression: relational_expression
+                    | equality_expression "==" relational_expression
+                    | equality_expression "!=" relational_expression
+
+
+?and_expression: equality_expression
+               | and_expression "&" equality_expression
+
+
+?exclusive_or_expression: and_expression
+                        | exclusive_or_expression "^" and_expression
+
+
+?inclusive_or_expression: exclusive_or_expression
+                        | inclusive_or_expression "|" exclusive_or_expression
+
+
+?logical_and_expression: inclusive_or_expression
+                       | logical_and_expression "&&" inclusive_or_expression
+
+
+?logical_or_expression: logical_and_expression
+                      | logical_or_expression "||" logical_and_expression
+
+
+?conditional_expression: logical_or_expression
+                       | logical_or_expression "?" expression ":" conditional_expression
+
+
+?assignment_expression: conditional_expression
+                      | unary_expression assignment_operator assignment_expression
+
+
+assignment_operator: "=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | "&=" | "^=" | "|="
+
+
+expression: assignment_expression ("," assignment_expression)*
+
+
+constant_expression: conditional_expression
+
+
+?declaration: declaration_specifiers init_declarator_list? ";"
+            | static_assert_declaration
+
+attribute_specifier: "__attribute__" "(" "(" expression ")" ")"
+
+declaration_specifiers: (storage_class_specifier | type_specifier | type_qualifier | function_specifier | alignment_specifier | attribute_specifier)+
+
+init_declarator_list: init_declarator ("," init_declarator)*
+
+init_declarator: declarator
+               | declarator "=" initializer
+
+
+!storage_class_specifier: "typedef"
+                       | "extern"
+                       | "static"
+                       | "_Thread_local"
+                       | "auto"
+                       | "register"
+
+
+!type_specifier: "void"
+              | "char"
+              | "short"
+              | "int"
+              | "long"
+              | "float"
+              | "double"
+              | "signed"
+              | "unsigned"
+              | "_Bool"
+              | "_Complex"
+              | atomic_type_specifier
+              | struct_or_union_specifier
+              | enum_specifier
+              | typedef_name
+
+
+struct_or_union_specifier: STRUCT_OR_UNION identifier? "{" struct_declaration_list "}"
+                         | STRUCT_OR_UNION identifier
+
+STRUCT_OR_UNION: "struct" | "union"
+
+struct_declaration_list: struct_declaration+
+
+struct_declaration: specifier_qualifier_list struct_declarator_list? ";"
+                  | static_assert_declaration
+
+specifier_qualifier_list: (type_qualifier | type_specifier)+
+
+struct_declarator_list: struct_declarator ("," struct_declarator)*
+
+struct_declarator: declarator
+                 | declarator? ":" constant_expression
+
+
+enum_specifier: "enum" identifier? "{" enumerator_list "}"
+              | "enum" identifier? "{" enumerator_list "," "}"
+              | "enum" identifier
+
+enumerator_list: enumerator
+               | enumerator_list "," enumerator
+
+enumerator: enumeration_constant
+          | enumeration_constant "=" constant_expression
+
+
+atomic_type_specifier: "_Atomic" "(" type_name ")"
+
+
+!type_qualifier: "const"
+              | "restrict"
+              | "__restrict"
+              | "__restrict__"
+              | "volatile"
+              | "_Atomic"
+
+
+function_specifier: "inline" | "_Noreturn"
+
+
+alignment_specifier: "_Alignas" "(" type_name ")"
+                   | "_Alignas" "(" constant_expression ")"
+
+
+asm: "__asm__" "(" expression ")"
+
+declarator: pointer? direct_declarator (attribute_specifier | asm)*
+
+?direct_declarator: identifier
+                 | "(" declarator ")"
+                 | direct_declarator "[" type_qualifier_list? assignment_expression? "]" -> direct_array_declarator
+                 | direct_declarator "[" "static" type_qualifier_list? assignment_expression "]" -> direct_array_declarator
+                 | direct_declarator "[" type_qualifier_list "static" assignment_expression "]" -> direct_array_declarator
+                 | direct_declarator "[" type_qualifier_list? "*" "]" -> direct_array_declarator
+                 | direct_declarator "(" parameter_type_list ")" -> direct_function_declarator
+                 | direct_declarator "(" identifier_list? ")" -> direct_function_declarator
+
+pointer: "*" type_qualifier_list?
+       | "*" type_qualifier_list? pointer
+
+type_qualifier_list: type_qualifier+
+
+parameter_type_list: parameter_list
+                   | parameter_list "," "..."
+
+parameter_list: parameter_declaration ("," parameter_declaration)*
+
+parameter_declaration: declaration_specifiers declarator
+                     | declaration_specifiers abstract_declarator?
+
+identifier_list: identifier ("," identifier)*
+
+type_name: specifier_qualifier_list abstract_declarator?
+
+?abstract_declarator: pointer
+                   | pointer? direct_abstract_declarator attribute_specifier*
+
+?direct_abstract_declarator: "(" abstract_declarator ")"
+                          | direct_abstract_declarator? "[" type_qualifier_list? assignment_expression? "]" -> direct_array_declarator
+                          | direct_abstract_declarator? "[" "static" type_qualifier_list? assignment_expression "]" -> direct_array_declarator
+                          | direct_abstract_declarator? "[" type_qualifier_list "static" assignment_expression "]" -> direct_array_declarator
+                          | direct_abstract_declarator? "[" "*" "]" -> direct_array_declarator
+                          | direct_abstract_declarator? "(" parameter_type_list? ")" -> direct_function_declarator
+
+
+typedef_name: identifier
+
+
+initializer: assignment_expression
+           | "{" initializer_list "}"
+           | "{" initializer_list "," "}"
+
+initializer_list: designation? initializer ("," designation? initializer)*
+
+designation: designator_list "="
+
+designator_list: designator+
+
+designator: "[" constant_expression "]"
+          | "." identifier
+
+
+static_assert_declaration: "_Static_assert" "(" constant_expression "," string_literal ")" ";"
+
+
+statement: labeled_statement
+         | compound_statement
+         | expression_statement
+         | selection_statement
+         | iteration_statement
+         | jump_statement
+
+
+labeled_statement: identifier ":" statement
+                 | "case" constant_expression ":" statement
+                 | "default" ":" statement
+
+
+compound_statement: "{" block_item_list? "}"
+
+block_item_list: block_item+
+
+?block_item: declaration | statement
+
+
+?expression_statement: expression? ";"
+
+
+selection_statement: "if" "(" expression ")" statement -> if
+                   | "if" "(" expression ")" statement "else" statement -> if
+                   | "switch" "(" expression ")" statement -> switch
+
+
+iteration_statement: "while" "(" expression ")" statement -> while
+                   | "do" statement "while" "(" expression ")" ";" -> do_while
+                   | "for" "(" expression? ";" expression? ";" expression? ")" statement -> for
+                   | "for" "(" declaration expression? ";" expression? ")" statement -> for
+
+
+jump_statement: "goto" identifier ";" -> goto
+              | "continue" ";" -> continue
+              | "break" ";" -> break
+              | "return" expression? ";" -> return
+
+
+translation_unit: external_declaration+
+
+external_declaration: function_definition
+                    | declaration
+
+
+function_definition: declaration_specifiers declarator declaration_list? compound_statement
+
+declaration_list: declaration+
+
+
+preprocessing_file: group?
+
+group: group_part+
+
+group_part: if_section
+          | control_line
+          | text_line
+          | "#" non_directive -> non_directive
+
+if_section: if_group elif_groups? else_group? endif_line
+
+if_group: "#" "if"     constant_expression NEW_LINE group? -> if
+        | "#" "ifdef"  identifier NEW_LINE group? -> ifdef
+        | "#" "ifndef" identifier NEW_LINE group? -> ifndef
+
+elif_groups: elif_group+
+
+elif_group: "#" "elif" constant_expression NEW_LINE group? -> elif
+
+else_group: "#" "else" NEW_LINE group? -> else
+
+endif_line: "#" "endif" NEW_LINE -> endif
+
+control_line: "#" "include" pp_tokens NEW_LINE -> include
+            | "#" "define"  identifier replacement_list NEW_LINE -> define_var
+            | "#" "define"  identifier "(" identifier_list? ")" replacement_list NEW_LINE -> define_func
+            | "#" "define"  identifier "(" "..." ")" replacement_list NEW_LINE -> define_func
+            | "#" "define"  identifier "(" identifier_list "," "..." ")" replacement_list NEW_LINE -> define_func
+            | "#" "undef"   identifier NEW_LINE -> undefine
+            | "#" "line"    pp_tokens NEW_LINE -> line
+            | "#" "error"   pp_tokens? NEW_LINE -> error
+            | "#" "pragma"  pp_tokens? NEW_LINE -> pragma
+            | "#" NEW_LINE
+
+text_line: pp_tokens? NEW_LINE
+
+non_directive: pp_tokens NEW_LINE
+
+replacement_list: pp_tokens?
+
+pp_tokens: preprocessing_token+
+
+NEW_LINE.1000: "\n"
+
