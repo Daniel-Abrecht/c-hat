@@ -1,2 +1,2 @@
 #!/bin/sh
-cpp | ./transpiler.py /dev/stdin
+cpp "$@" | ./transpiler.py /dev/stdin
