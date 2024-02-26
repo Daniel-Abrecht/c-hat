@@ -18,7 +18,7 @@ with open("syntax.lark") as f:
       context.pos = 0
       def sub(tree):
         n = 0
-        for i, entry in enumerate(tree.children):
+        for i, entry in enumerate([*tree.children]):
           if isinstance(entry,Tree):
             sub(entry)
           elif isinstance(entry, Token):
