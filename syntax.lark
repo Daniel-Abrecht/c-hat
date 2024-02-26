@@ -34,7 +34,7 @@ KEYWORD: "auto" | "if" | "unsigned"
        | "goto" | "union" | "__restrict" | "__restrict__"
 keyword: KEYWORD
 
-IDENTIFIER: IDENTIFIER_NONDIGIT ( IDENTIFIER_NONDIGIT | DIGIT )*
+IDENTIFIER.-10: IDENTIFIER_NONDIGIT ( IDENTIFIER_NONDIGIT | DIGIT )*
 identifier: IDENTIFIER
 
 IDENTIFIER_NONDIGIT: NONDIGIT
