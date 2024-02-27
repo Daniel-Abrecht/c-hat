@@ -56,6 +56,24 @@ class ParallelAstEntry():
   def __init__(self, tree):
     tree.meta.ast = self
     self.tree = tree
+  def parent():
+    t = self.tree
+    while True:
+      t = getattr(t, 'parent')
+      if not t: break
+      ast = getattr(t.meta, 'ast')
+      if ast:
+        return ast
+  def ast_children():
+    l = []
+    def sub(tree):
+      for entry in tree.children:
+        if isinstance(entry,Tree):
+          if hasattr(entry.meta, 'ast'):
+            l.append(entry.meta.ast)
+          else:
+            sub(entry)
+    return l
   def serialize(self):
     return serialize(self.tree)
 
@@ -64,10 +82,25 @@ class ParallelAst(Visitor):
     def __init__(self, tree):
       super().__init__(tree)
     def get_specifiers(self):
-      return [str(token) for token in self.tree if isinstance(token, Token) and token.type != 'ignored']
-  class direct_array_declarator(ParallelAstEntry):
+      return [str(token) for token in self.tree.children if isinstance(token, Token) and token.type != 'ignored']
+  class direct_declarator(ParallelAstEntry):
     def __init__(self, tree):
       super().__init__(tree)
+    def get_identifier(self):
+      first_rule = next(x for x in self.tree.children if isinstance(x, Tree))
+      a = getattr(first_rule.meta, 'ast')
+      if isinstance(a, ParallelAst.identifier):
+        return a.value()
+      elif isinstance(a, direct_declarator):
+        return a.get_identifier()
+  class direct_array_declarator(direct_declarator):
+    def __init__(self, tree):
+      super().__init__(tree)
+  class identifier(ParallelAstEntry):
+    def __init__(self, tree):
+      super().__init__(tree)
+    def value(self):
+      return next(x for x in self.tree.children if isinstance(x, Token) and x.type == 'IDENTIFIER')
 
 class TransformVariableArrayArguments(Transformer):
   def parameter_list(self, args):
