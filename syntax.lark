@@ -408,11 +408,11 @@ abstract_declarator: pointer
                    | pointer? direct_abstract_declarator attribute_specifier*
 
 ?direct_abstract_declarator: "(" abstract_declarator ")"
-                          | direct_abstract_declarator? "[" type_qualifier_list? assignment_expression? "]" -> direct_array_declarator
-                          | direct_abstract_declarator? "[" "static" type_qualifier_list? assignment_expression "]" -> direct_array_declarator
-                          | direct_abstract_declarator? "[" type_qualifier_list "static" assignment_expression "]" -> direct_array_declarator
-                          | direct_abstract_declarator? "[" "*" "]" -> direct_array_declarator
-                          | direct_abstract_declarator? "(" parameter_type_list? ")" -> direct_function_declarator
+                          | direct_abstract_declarator? "[" type_qualifier_list? assignment_expression? "]" -> abstract_array_declarator
+                          | direct_abstract_declarator? "[" "static" type_qualifier_list? assignment_expression "]" -> abstract_array_declarator
+                          | direct_abstract_declarator? "[" type_qualifier_list "static" assignment_expression "]" -> abstract_array_declarator
+                          | direct_abstract_declarator? "[" "*" "]" -> abstract_array_declarator
+                          | direct_abstract_declarator? "(" parameter_type_list? ")" -> abstract_function_declarator
 
 
 typedef_name: identifier
