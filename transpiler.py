@@ -60,22 +60,6 @@ class ShadowAstEntry():
   def __init__(self, tree):
     tree.meta.ast = self
     self.tree = tree
-  def parent(self):
-    t = self.tree
-    while True:
-      t = getattr(t, 'parent', None)
-      if not t: break
-      a = ast(t)
-      if a:
-        return a
-  def closest(self, name):
-    a = self
-    while True:
-      a = a.parent()
-      if not a:
-        break
-      if a.data == name:
-        return a
   def ast_children(self):
     l = []
     def sub(tree):
@@ -94,11 +78,26 @@ class ShadowAstEntry():
       result += serialize(entry, context)
     return result
 
-class declarator_mixin: pass
+class declarator_mixin:
+  def is_pointer(self):
+    for a in ast(self.tree.children):
+      if isinstance(a, ShadowAst.pointer):
+        return True
+      elif isinstance(a, ShadowAst.declarator):
+        return a.is_pointer()
+    return False
+
 class direct_declarator_mixin: pass
 
 class array_declarator_mixin:
   def serialize(self, context={}):
+    context={**context}
+    if 'array_sub' not in context:
+      context['array_sub'] = [False]
+    if not context['array_sub'][0]:
+      self.serialize_sub(context)
+    return self.serialize_sub(context)
+  def serialize_sub(self, context={}):
     defined_later = context.get('defined_later',set())
     result = ''
     multi = False
@@ -109,12 +108,34 @@ class array_declarator_mixin:
           result += serialize(entry, context)
           multi = True
           continue
+        elif isinstance(a, ShadowAst.direct_declarator) and context['array_sub'][0]:
+          fb = context.get('function_body', None)
+          if context.get("parameter_list_counter",0) == 1:
+            result += serialize(entry, {**context,'id_prefix':'_C_HAT_'})
+            continue
+          if fb:
+            x = ''
+            if fb == 'def':
+              x = serialize(entry, context)
+            elif fb == 'cast':
+              x = serialize(entry, {**context,'id_prefix':-1})
+            if not a.is_pointer():
+              if entry.data == 'declarator':
+                return '*'+x.strip();
+              else:
+                return '(*'+x.strip()+')';
+            result += x
+            continue
         elif isinstance(a, ShadowAst.assignment_expression):
           gri = a.get_referenced_identifiers()
           used_not_yet_defined_identifiers = gri & defined_later
           if used_not_yet_defined_identifiers:
             if multi:
-              return ' /*TODO*/'
+              context['array_sub'][0] = True
+              if context.get('function_definition',False) and context.get("parameter_list_counter",0) == 1:
+                result += '1';
+              else:
+                result += '*'
             continue # Remove expression
       result += serialize(entry, context)
     return result
@@ -159,6 +180,16 @@ class ShadowAst(Visitor):
   class identifier(ShadowAstEntry):
     def value(self):
       return next(x for x in self.tree.children if isinstance(x, Token) and x.type == 'IDENTIFIER').value
+    def serialize(self, context={}):
+      prefix = context.get('id_prefix', None)
+      if prefix == -1:
+        return ''
+      result = ''
+      for entry in self.tree.children:
+        if isinstance(entry, Token) and entry.type == 'IDENTIFIER' and prefix is not None:
+          result += prefix;
+        result += serialize(entry, context)
+      return result
 
   class parameter_declaration(declarator): pass
 
@@ -168,16 +199,60 @@ class ShadowAst(Visitor):
     def get_arguments(self):
       return [p.get_identifier() for p in self.get_parameters()]
     def serialize(self, context={}):
+      pl_count = context.get('parameter_list_counter', 0) + 1
       args = self.get_arguments()
       result = ''
       for i, entry in enumerate(self.tree.children):
         c = {**context}
+        c['parameter_list_counter'] = pl_count
         c['defined_later'] = {*args[i+1:]} - {None}
+        c['array_sub'] = [False]
+        a = ast(entry)
         result += serialize(entry, c)
+        if pl_count == 1 and c['array_sub'][0] and 'body_insert' in c:
+          c['body_insert'].append(
+            serialize(entry, {**context,
+              'parameter_list_counter': 2,
+              'array_sub': [True],
+              'function_body': 'def',
+            }) + ' = (' + serialize(entry, {**context,
+              'parameter_list_counter': 2,
+              'array_sub': [True],
+              'function_body': 'cast',
+            }) +')_C_HAT_'+a.get_identifier()+';'
+          );
       return result
 
-  class assignment_expression(expression_component_mixin, ShadowAstEntry):
-    pass
+  class assignment_expression(expression_component_mixin, ShadowAstEntry): pass
+  class pointer(ShadowAstEntry): pass
+
+  class function_definition(ShadowAstEntry):
+    def serialize(self, context={}):
+      context={**context,
+        'function_definition': True,
+        'body_insert': [],
+      }
+      result = ''
+      for entry in self.tree.children:
+        result += serialize(entry, context)
+      return result
+
+  class compound_statement(ShadowAstEntry):
+    def serialize(self, context={}):
+      compound_count = context.get('compound_count', 0) + 1
+      body_insert = context.get('body_insert',[])
+      if body_insert: del context['body_insert']
+      first = True
+      result = ''
+      for entry in self.tree.children:
+        c = {**context}
+        c['compound_count'] = compound_count
+        if isinstance(entry, Tree):
+          if first and compound_count == 1 and body_insert:
+            result += '\n  '+'\n  '.join(body_insert)+'\n  '
+          first = False
+        result += serialize(entry, c)
+      return result
 
 with open(sys.argv[1]) as f:
   print(serialize(C_hat(f.read()).tree))

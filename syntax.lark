@@ -378,7 +378,7 @@ asm: "__asm__" "(" expression ")"
 
 declarator: pointer? direct_declarator (attribute_specifier | asm)*
 
-direct_declarator: identifier
+?direct_declarator: identifier -> direct_declarator
                  | "(" declarator ")"
                  | direct_declarator "[" type_qualifier_list? assignment_expression? "]" -> direct_array_declarator
                  | direct_declarator "[" "static" type_qualifier_list? assignment_expression "]" -> direct_array_declarator
